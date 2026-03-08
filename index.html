@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>FinanzRadar</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0f1929; --bg2:#152238; --bg3:#1a2d47; --surface:#1e3350;
+    --border:#1f3355; --border2:#243a5e;
+    --navy:#1c2b4a; --navy2:#243660; --navy-soft:#2e4a80;
+    --rose:#c98878; --rose2:#dba090; --rose-pale:rgba(201,136,120,0.15);
+    --anthracite:#8899bb; --charcoal:#ccd8ee; --steel:#7a90b8; --silver:#8a9ab8; --muted:#5a7090;
+    --text:#dce8f8; --text2:#9ab0cc; --text3:#5a7090;
+    --green:#4ab880; --green-bg:rgba(74,184,128,0.1); --red:#e06060; --red-bg:rgba(224,96,96,0.1);
+    --shadow:0 1px 4px rgba(0,0,0,0.3),0 4px 16px rgba(0,0,0,0.2);
+    --shadow2:0 2px 10px rgba(0,0,0,0.4),0 8px 28px rgba(0,0,0,0.3);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;-webkit-font-smoothing:antialiased;}
+  .header{background:#0a1120;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,0.4);border-bottom:1px solid var(--border2);}
+  .logo{font-family:'Playfair Display',serif;font-size:18px;font-weight:600;letter-spacing:0.5px;color:#fff;}
+  .logo em{font-style:normal;color:var(--rose2);}
+  .header-right{display:flex;align-items:center;gap:14px;}
+  .clock{font-family:'DM Mono',monospace;font-size:12px;color:rgba(255,255,255,0.55);letter-spacing:1px;}
+  .status-pill{font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;padding:3px 10px;border-radius:20px;}
+  .status-open{background:rgba(46,125,90,0.25);color:#6fcca0;border:1px solid rgba(46,125,90,0.3);}
+  .status-closed{background:rgba(184,64,64,0.2);color:#e08080;border:1px solid rgba(184,64,64,0.25);}
+  .nav{background:var(--bg2);border-bottom:1px solid var(--border2);display:flex;overflow-x:auto;padding:0 20px;position:sticky;top:56px;z-index:100;}
+  .nav::-webkit-scrollbar{display:none;}
+  .nav-item{padding:14px 16px;font-size:12px;font-weight:500;letter-spacing:0.8px;text-transform:uppercase;color:var(--text3);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:all 0.2s;user-select:none;}
+  .nav-item:hover{color:var(--text2);}
+  .nav-item.active{color:var(--rose2);border-bottom-color:var(--rose);font-weight:600;}
+  .container{max-width:1360px;margin:0 auto;padding:20px;}
+  .page{display:none;animation:fadeIn 0.2s ease;}
+  .page.active{display:block;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .card{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);}
+  .card-head{padding:12px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border2);background:var(--surface);}
+  .card-title{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--steel);}
+  .card-body{padding:16px 18px;}
+  .etf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;}
+  .etf-card{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:18px;position:relative;overflow:hidden;box-shadow:var(--shadow);transition:box-shadow 0.2s,transform 0.2s;}
+  .etf-card:hover{box-shadow:var(--shadow2);transform:translateY(-1px);}
+  .etf-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;}
+  .etf-card.c-navy::after{background:linear-gradient(90deg,var(--navy),var(--navy-soft));}
+  .etf-card.c-rose::after{background:linear-gradient(90deg,var(--rose),var(--rose2));}
+  .etf-card.c-steel::after{background:linear-gradient(90deg,var(--anthracite),var(--steel));}
+  .etf-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 7px;border-radius:3px;text-transform:uppercase;margin-bottom:8px;}
+  .b-navy{background:rgba(100,150,220,0.15);color:#7aabee;}
+  .b-rose{background:rgba(201,136,120,0.15);color:var(--rose2);}
+  .b-steel{background:rgba(120,140,180,0.15);color:#9ab0cc;}
+  .etf-ticker-row{display:flex;align-items:baseline;justify-content:space-between;gap:6px;}
+  .etf-ticker{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:var(--rose2);}
+  .etf-name{font-size:11px;color:var(--text3);margin:3px 0 14px;line-height:1.4;}
+  .etf-price{font-family:'Playfair Display',serif;font-size:30px;color:var(--text);letter-spacing:-0.5px;}
+  .etf-currency-label{font-size:11px;color:var(--text3);margin-top:2px;}
+  .etf-delta{font-family:'DM Mono',monospace;font-size:12px;margin-top:4px;}
+  .delta-up{color:var(--green);}
+  .delta-down{color:var(--red);}
+  .etf-footer{margin-top:14px;padding-top:12px;border-top:1px solid var(--border2);display:flex;justify-content:space-between;}
+  .etf-footer-item label{display:block;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:2px;}
+  .etf-footer-item span{font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);}
+  .skel{background:linear-gradient(90deg,var(--bg3) 25%,var(--surface) 50%,var(--bg3) 75%);background-size:200%;border-radius:4px;animation:shimmer 1.4s infinite;display:inline-block;}
+  @keyframes shimmer{0%{background-position:200%}100%{background-position:-200%}}
+  .stat-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+  .stat-box{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:12px 16px;box-shadow:var(--shadow);}
+  .stat-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;}
+  .stat-val{font-family:'DM Mono',monospace;font-size:15px;color:var(--text);font-weight:500;}
+  .market-row{display:flex;align-items:center;padding:9px 0;border-bottom:1px solid var(--border2);}
+  .market-row:last-child{border-bottom:none;}
+  .market-name{flex:1;font-size:13px;color:var(--text2);}
+  .market-price{font-family:'DM Mono',monospace;font-size:13px;color:var(--text);min-width:90px;text-align:right;}
+  .market-chg{font-family:'DM Mono',monospace;font-size:12px;min-width:75px;text-align:right;}
+  .up{color:var(--green);}
+  .dn{color:var(--red);}
+  .news-item{padding:13px 0;border-bottom:1px solid var(--border2);cursor:pointer;transition:background 0.15s;border-radius:4px;}
+  .news-item:last-child{border-bottom:none;}
+  .news-item:hover{background:var(--surface);margin:0 -6px;padding:13px 6px;}
+  .source-chip{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:3px;margin-bottom:7px;}
+  .chip-navy{background:rgba(100,150,220,0.15);color:#7aabee;}
+  .chip-rose{background:rgba(201,136,120,0.18);color:var(--rose2);}
+  .chip-steel{background:rgba(120,150,190,0.15);color:#9ab8d8;}
+  .chip-charcoal{background:rgba(150,170,200,0.12);color:#aabbd0;}
+  .chip-navy2{background:rgba(80,120,200,0.15);color:#88aaee;}
+  .news-headline{font-size:13px;font-weight:500;color:var(--text);line-height:1.5;margin-bottom:5px;}
+  .news-meta{font-size:11px;color:var(--text3);display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .news-tag{font-size:10px;padding:1px 6px;border-radius:3px;background:var(--bg3);color:var(--text2);}
+  .news-expand{font-size:11px;color:var(--rose);}
+  .news-expand::before{content:'▾ ';}
+  .news-summary-text{font-size:12px;color:var(--text2);line-height:1.7;margin-top:8px;display:none;padding-top:6px;border-top:1px solid var(--border2);}
+  .news-item.open .news-summary-text{display:block;}
+  .news-item.open .news-expand::before{content:'▴ ';}
+  .filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .chip-btn{font-size:11px;padding:5px 13px;border-radius:20px;cursor:pointer;border:1px solid var(--border2);color:var(--text2);background:var(--bg3);transition:all 0.2s;font-family:'DM Sans',sans-serif;font-weight:500;}
+  .chip-btn:hover{border-color:var(--rose);color:var(--rose2);}
+  .chip-btn.on{background:var(--rose);color:#fff;border-color:var(--rose);}
+  .search-input{width:100%;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:10px 14px;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;margin-bottom:14px;outline:none;transition:border-color 0.2s;box-shadow:var(--shadow);}
+  .search-input:focus{border-color:var(--rose);}
+  .search-input::placeholder{color:var(--muted);}
+  .briefing-banner{background:linear-gradient(135deg,#0a1528 0%,#152545 100%);border:1px solid var(--border2);border-radius:10px;padding:20px 22px;margin-bottom:18px;color:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.3);}
+  .briefing-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--rose2);margin-bottom:8px;}
+  .briefing-text{font-size:13px;line-height:1.8;color:rgba(220,232,248,0.9);}
+  .total-bar{background:linear-gradient(135deg,#0a1528 0%,#172040 100%);border:1px solid var(--border2);border-radius:10px;padding:18px 22px;display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;box-shadow:0 4px 20px rgba(0,0,0,0.3);}
+  .total-bar-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:4px;}
+  .total-bar-val{font-family:'Playfair Display',serif;font-size:28px;color:#fff;letter-spacing:-0.5px;}
+  .total-bar-chg{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;}
+  .port-input-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+  .port-input{flex:1;min-width:120px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;}
+  .port-input:focus{border-color:var(--rose);background:var(--surface);}
+  .btn-add{background:var(--rose);color:#fff;padding:9px 20px;border:none;border-radius:7px;cursor:pointer;font-weight:600;font-size:12px;letter-spacing:0.5px;font-family:'DM Sans',sans-serif;transition:opacity 0.2s;white-space:nowrap;}
+  .btn-add:hover{opacity:0.88;}
+  table.port-table{width:100%;border-collapse:collapse;}
+  .port-table th{text-align:left;padding:9px 12px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border2);font-weight:600;background:var(--surface);}
+  .port-table td{padding:11px 12px;font-size:13px;border-bottom:1px solid var(--border2);}
+  .port-table tr:hover td{background:var(--surface);}
+  .mono{font-family:'DM Mono',monospace;}
+  .set-section{margin-bottom:28px;}
+  .set-title{font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--rose2);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid rgba(201,136,120,0.25);}
+  .set-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border2);}
+  .set-lbl{font-size:13px;color:var(--text);}
+  .set-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+  .toggle{position:relative;width:42px;height:24px;cursor:pointer;flex-shrink:0;}
+  .toggle input{display:none;}
+  .toggle-track{position:absolute;inset:0;background:var(--border2);border-radius:12px;transition:background 0.2s;}
+  .toggle-track::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#ccd8ee;top:3px;left:3px;transition:transform 0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.3);}
+  .toggle input:checked + .toggle-track{background:var(--rose);}
+  .toggle input:checked + .toggle-track::after{transform:translateX(18px);}
+  .topic-pill{display:inline-block;padding:5px 12px;margin:3px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid var(--border2);color:var(--text2);transition:all 0.2s;background:var(--bg3);}
+  .topic-pill:hover{border-color:var(--rose);color:var(--rose2);background:rgba(201,136,120,0.1);}
+  .btn-refresh{font-size:10px;padding:4px 10px;background:transparent;border:1px solid var(--border2);color:var(--text3);border-radius:5px;cursor:pointer;font-family:'DM Mono',monospace;transition:all 0.2s;}
+  .btn-refresh:hover{border-color:var(--rose);color:var(--rose2);}
+  .spin{animation:spinning 0.8s linear infinite;display:inline-block;}
+  @keyframes spinning{to{transform:rotate(360deg)}}
+  .dots{display:inline-flex;gap:4px;align-items:center;}
+  .dots span{width:6px;height:6px;background:var(--rose);border-radius:50%;animation:dotpop 1.2s infinite;}
+  .dots span:nth-child(2){animation-delay:.2s;}
+  .dots span:nth-child(3){animation-delay:.4s;}
+  @keyframes dotpop{0%,80%,100%{transform:scale(.5);opacity:.3}40%{transform:scale(1);opacity:1}}
+  .loading-row{display:flex;align-items:center;gap:10px;padding:18px;font-size:13px;color:var(--text3);}
+  .api-notice{background:rgba(201,136,120,0.1);border:1px solid rgba(201,136,120,0.2);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--rose2);margin-top:14px;line-height:1.7;}
+  @media(max-width:900px){.etf-grid,.grid2,.grid3,.stat-strip{grid-template-columns:1fr 1fr;}}
+  @media(max-width:600px){.etf-grid,.grid2,.grid3,.stat-strip{grid-template-columns:1fr;}.container{padding:14px;}.etf-price{font-size:24px;}.total-bar{flex-direction:column;align-items:flex-start;gap:8px;}.port-input-row{flex-direction:column;}}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">Finanz<em>Radar</em></div>
+  <div class="header-right">
+    <span id="clock" class="clock">--:--:--</span>
+    <span id="market-pill" class="status-pill status-closed">Geschlossen</span>
+  </div>
+</header>
+
+<nav class="nav">
+  <div class="nav-item active" data-page="dashboard" onclick="nav(this)">Dashboard</div>
+  <div class="nav-item" data-page="portfolio" onclick="nav(this)">Portfolio</div>
+  <div class="nav-item" data-page="news" onclick="nav(this)">Nachrichten</div>
+  <div class="nav-item" data-page="briefing" onclick="nav(this)">KI‑Briefing</div>
+  <div class="nav-item" data-page="settings" onclick="nav(this)">Einstellungen</div>
+</nav>
+
+<!-- DASHBOARD -->
+<div id="p-dashboard" class="page active">
+<div class="container">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <span style="font-family:'Playfair Display',serif;font-size:20px;color:var(--text);">Meine ETFs &amp; ETC</span>
+    <button class="btn-refresh" onclick="loadPrices(this)">⟳ Kurse aktualisieren</button>
+  </div>
+  <div class="etf-grid" id="etf-grid"></div>
+  <div class="stat-strip">
+    <div class="stat-box"><div class="stat-label">EUR / USD</div><div class="stat-val" id="s-eurusd">—</div></div>
+    <div class="stat-box"><div class="stat-label">Gold Spot (USD/oz)</div><div class="stat-val" id="s-gold">—</div></div>
+    <div class="stat-box"><div class="stat-label">Letzter Kursabruf</div><div class="stat-val" id="s-updated" style="font-size:12px;">—</div></div>
+    <div class="stat-box"><div class="stat-label">Börsenstatus</div><div class="stat-val" id="s-status" style="font-size:12px;">—</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-head"><span class="card-title">Schlagzeilen</span><span style="font-size:10px;color:var(--muted);">Letzte 24h</span></div>
+      <div class="card-body" id="dash-news"><div class="loading-row"><div class="dots"><span></span><span></span><span></span></div>Laden…</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">Märkte</span></div>
+      <div class="card-body" id="dash-markets"><div class="loading-row"><div class="dots"><span></span><span></span><span></span></div>Laden…</div></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px;">
+    <div class="card-head"><span class="card-title">Schnellsuche nach Thema</span></div>
+    <div class="card-body">
+      <span class="topic-pill" onclick="goTopic(this)">KI &amp; LLMs</span>
+      <span class="topic-pill" onclick="goTopic(this)">Fed &amp; Zinsen</span>
+      <span class="topic-pill" onclick="goTopic(this)">Gold</span>
+      <span class="topic-pill" onclick="goTopic(this)">ETF-Flows</span>
+      <span class="topic-pill" onclick="goTopic(this)">Small Caps</span>
+      <span class="topic-pill" onclick="goTopic(this)">Inflation</span>
+      <span class="topic-pill" onclick="goTopic(this)">China</span>
+      <span class="topic-pill" onclick="goTopic(this)">Nvidia</span>
+      <span class="topic-pill" onclick="goTopic(this)">Anleihen</span>
+      <span class="topic-pill" onclick="goTopic(this)">Rezession</span>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- PORTFOLIO -->
+<div id="p-portfolio" class="page">
+<div class="container">
+  <div class="total-bar">
+    <div><div class="total-bar-label">Gesamtportfolio</div><div class="total-bar-val" id="pt-total">— EUR</div></div>
+    <div style="text-align:right;"><div class="total-bar-label">Gesamtrendite</div><div class="total-bar-chg" id="pt-chg">—</div></div>
+  </div>
+  <div class="card" style="margin-bottom:14px;">
+    <div class="card-head"><span class="card-title">Position hinzufügen</span></div>
+    <div class="card-body">
+      <div class="port-input-row">
+        <input class="port-input" id="i-ticker" placeholder="Ticker z. B. VWCE.DE"/>
+        <input class="port-input" id="i-name" placeholder="Bezeichnung"/>
+        <input class="port-input" id="i-shares" type="number" placeholder="Anteile" min="0" step="0.001"/>
+        <input class="port-input" id="i-buy" type="number" placeholder="Kaufkurs (€)" min="0" step="0.01"/>
+        <button class="btn-add" onclick="addPos()">+ Hinzufügen</button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);">Tipp: XETRA-Ticker für EUR-Kurse enden auf .DE (z. B. VWCE.DE, IUSN.DE, VZLD.DE)</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><span class="card-title">Positionen</span><button class="btn-refresh" onclick="refreshPort(this)">⟳ Kurse laden (kostenlos)</button></div>
+    <div style="overflow-x:auto;">
+      <table class="port-table">
+        <thead><tr><th>Bezeichnung</th><th>Ticker</th><th>Anteile</th><th>Kaufkurs €</th><th>Aktuell €</th><th>Wert €</th><th>+/− €</th><th>+/− %</th><th></th></tr></thead>
+        <tbody id="port-body"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px;">
+    <div class="card-head"><span class="card-title">ETF-Steckbriefe</span></div>
+    <div class="card-body">
+      <div class="grid3">
+        <div style="padding:12px;background:var(--surface);border:1px solid var(--border2);border-radius:8px;border-top:3px solid var(--navy);">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#7aabee;margin-bottom:6px;">VWCE.DE</div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.8;">Vanguard FTSE All-World Acc<br>ISIN: IE00BK5BQT80<br>TER: 0,19 % · Physisch (Sampling)<br>Thesaurierend · ~3.700 Titel<br>XETRA (EUR)</div>
+        </div>
+        <div style="padding:12px;background:var(--surface);border:1px solid var(--border2);border-radius:8px;border-top:3px solid var(--rose);">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:var(--rose2);margin-bottom:6px;">VZLD.DE</div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.8;">WisdomTree Physical Swiss Gold<br>ISIN: JE00B588CD74<br>TER: 0,15 % · Physisches Gold Zürich<br>LBMA Good Delivery<br>XETRA (EUR)</div>
+        </div>
+        <div style="padding:12px;background:var(--surface);border:1px solid var(--border2);border-radius:8px;border-top:3px solid var(--anthracite);">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:var(--text2);margin-bottom:6px;">IUSN.DE</div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.8;">iShares MSCI World Small Cap Acc<br>ISIN: IE00BF4RFH31<br>TER: 0,35 % · ~3.400 Titel<br>Thesaurierend<br>XETRA (EUR)</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;padding:12px 14px;background:rgba(100,150,220,0.06);border:1px solid rgba(100,150,220,0.15);border-radius:7px;font-size:12px;color:var(--text2);line-height:1.8;">
+        <strong style="color:#7aabee;">ℹ Kurse am Wochenende &amp; nachts:</strong> Alle drei Positionen werden jetzt in <strong>EUR über XETRA</strong> angezeigt — genau wie in Trade Republic. Außerhalb der Börsenzeiten siehst du den letzten offiziellen Kurs. Das Gold-ETC bildet den Kassapreis nach, der täglich vom Anbieter veröffentlicht wird.
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- NACHRICHTEN -->
+<div id="p-news" class="page">
+<div class="container">
+  <input id="ns-search" class="search-input" placeholder="🔍 Nachrichten durchsuchen …" oninput="renderNews()"/>
+  <div class="filter-bar">
+    <button class="chip-btn on" onclick="setFilter('all',this)">Alle</button>
+    <button class="chip-btn" onclick="setFilter('ki',this)">🤖 KI &amp; Tech</button>
+    <button class="chip-btn" onclick="setFilter('makro',this)">🌍 Makro</button>
+    <button class="chip-btn" onclick="setFilter('geldanlage',this)">💰 Geldanlage</button>
+    <button class="chip-btn" onclick="setFilter('gold',this)">🥇 Gold</button>
+    <button class="chip-btn" onclick="setFilter('etf',this)">📊 ETF</button>
+  </div>
+  <div class="grid2" id="news-grid"></div>
+</div>
+</div>
+
+<!-- KI-BRIEFING -->
+<div id="p-briefing" class="page">
+<div class="container">
+  <div class="briefing-banner">
+    <div class="briefing-label">⚡ Tages-Briefing</div>
+    <div id="br-main" class="briefing-text"><div class="loading-row" style="padding:0;"><div class="dots"><span></span><span></span><span></span></div>&nbsp;Wird generiert …</div></div>
+  </div>
+  <div class="grid2" style="margin-bottom:14px;">
+    <div class="card"><div class="card-head"><span class="card-title">🤖 KI &amp; Technologie</span></div><div class="card-body" id="br-ki"><div class="loading-row"><div class="dots"><span></span><span></span><span></span></div></div></div></div>
+    <div class="card"><div class="card-head"><span class="card-title">🌍 Weltwirtschaft &amp; Makro</span></div><div class="card-body" id="br-macro"><div class="loading-row"><div class="dots"><span></span><span></span><span></span></div></div></div></div>
+    <div class="card"><div class="card-head"><span class="card-title">💰 Geldanlage &amp; ETFs</span></div><div class="card-body" id="br-etf"><div class="loading-row"><div class="dots"><span></span><span></span><span></span></div></div></div></div>
+    <div class="card"><div class="card-head"><span class="card-title">🥇 Gold &amp; Rohstoffe</span></div><div class="card-body" id="br-gold"><div class="loading-row"><div class="dots"><span></span><span></span><span></span></div></div></div></div>
+  </div>
+  <div style="text-align:center;">
+    <button class="btn-add" onclick="doBriefing()" style="font-size:13px;padding:12px 28px;">✦ Neues KI-Briefing generieren</button>
+    <div class="api-notice" style="max-width:520px;margin:12px auto 0;">
+      Das Briefing nutzt die <strong>Claude API</strong> (ca. 0,01–0,02 € pro Generierung). Kurse &amp; Nachrichten sind komplett kostenlos. Claude-API-Key unter <strong>platform.anthropic.com</strong> registrieren und in den Einstellungen eintragen.
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- EINSTELLUNGEN -->
+<div id="p-settings" class="page">
+<div class="container" style="max-width:680px;">
+  <div class="set-section">
+    <div class="set-title">Claude API-Key (für KI-Briefing)</div>
+    <div class="port-input-row" style="margin-bottom:6px;">
+      <input class="port-input" id="apikey-input" type="password" placeholder="sk-ant-api03-…" style="flex:1;"/>
+      <button class="btn-add" onclick="saveKey()">Speichern</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);">Wird nur lokal im Browser gespeichert. Registrierung: <a href="https://platform.anthropic.com" target="_blank" style="color:var(--rose2);">platform.anthropic.com</a></div>
+  </div>
+  <div class="set-section">
+    <div class="set-title">Nachrichtenquellen</div>
+    <div id="src-list"></div>
+  </div>
+  <div class="set-section">
+    <div class="set-title">Themen</div>
+    <div class="set-row"><div><div class="set-lbl">KI &amp; Technologie</div><div class="set-sub">OpenAI, Anthropic, Chips, LLMs</div></div><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label></div>
+    <div class="set-row"><div><div class="set-lbl">Weltwirtschaft &amp; Makro</div><div class="set-sub">Zinsen, Fed, EZB, BIP</div></div><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label></div>
+    <div class="set-row"><div><div class="set-lbl">Geldanlage &amp; ETFs</div></div><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label></div>
+    <div class="set-row"><div><div class="set-lbl">Gold &amp; Rohstoffe</div></div><label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div></label></div>
+  </div>
+  <div class="set-section">
+    <div class="set-title">App auf dem Handy speichern</div>
+    <div style="padding:14px;background:rgba(100,150,220,0.06);border:1px solid rgba(100,150,220,0.15);border-radius:8px;font-size:12px;color:var(--text2);line-height:1.9;">
+      📱 <strong>iPhone (Safari):</strong> Teilen-Symbol → „Zum Home-Bildschirm" → hinzufügen.<br>
+      Danach erscheint FinanzRadar als App-Icon auf deinem Startbildschirm.
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const ETFS=[
+  {id:'vwce',ticker:'VWCE.DE',name:'Vanguard FTSE All-World Acc',isin:'IE00BK5BQT80',col:'c-navy',badge:'b-navy',ter:'0,19%',type:'ETF'},
+  {id:'vzld',ticker:'VZLD.DE',name:'WisdomTree Physical Swiss Gold',isin:'JE00B588CD74',col:'c-rose',badge:'b-rose',ter:'0,15%',type:'ETC'},
+  {id:'iusn',ticker:'IUSN.DE',name:'iShares MSCI World Small Cap Acc',isin:'IE00BF4RFH31',col:'c-steel',badge:'b-steel',ter:'0,35%',type:'ETF'},
+];
+const SOURCES=[
+  {id:'bloomberg',name:'Bloomberg',url:'https://bloomberg.com/markets',chip:'chip-navy',desc:'Globales Finanzleitmedium',on:true},
+  {id:'reuters',name:'Reuters',url:'https://reuters.com/finance',chip:'chip-rose',desc:'Schnellster globaler Newswire',on:true},
+  {id:'ft',name:'Financial Times',url:'https://ft.com',chip:'chip-steel',desc:'Tiefe Wirtschaftsanalysen',on:true},
+  {id:'wsj',name:'Wall St. Journal',url:'https://wsj.com/markets',chip:'chip-charcoal',desc:'US-Fokus, Unternehmen',on:true},
+  {id:'cnbc',name:'CNBC',url:'https://cnbc.com',chip:'chip-navy2',desc:'Live-Märkte & Earnings',on:true},
+  {id:'seeking',name:'Seeking Alpha',url:'https://seekingalpha.com',chip:'chip-rose',desc:'ETF & Fondsanalysen',on:true},
+  {id:'marketwatch',name:'MarketWatch',url:'https://marketwatch.com',chip:'chip-steel',desc:'Breite Marktberichterstattung',on:true},
+  {id:'barrons',name:"Barron's",url:'https://barrons.com',chip:'chip-navy',desc:'Institutionelle Anlageresearch',on:false},
+];
+const NEWS=[
+  {id:1,src:'Bloomberg',chip:'chip-navy',headline:'Fed hält Zinsen stabil — Powell warnt vor Inflationsrisiken',summary:'Die US-Notenbank ließ den Leitzins unverändert. Fed-Chef Jerome Powell betonte, weitere Datenpunkte seien nötig. Marktreaktionen zeigten sich gedämpft.',time:'vor 2h',topics:['makro']},
+  {id:2,src:'Reuters',chip:'chip-rose',headline:'Gold steigt auf neues Allzeithoch — geopolitische Unsicherheit treibt Nachfrage',summary:'Der Goldpreis überschritt erneut 3.000 USD/oz. Physische ETCs wie das WisdomTree Physical Swiss Gold verzeichnen starke Zuflüsse.',time:'vor 3h',topics:['gold','geldanlage']},
+  {id:3,src:'Financial Times',chip:'chip-steel',headline:'Claude 4 & GPT-5: KI-Modelle setzen neue Maßstäbe',summary:'Anthropic und OpenAI haben neue Modellgenerationen vorgestellt. Analysten sehen KI-Infrastruktur als wichtigsten Wachstumstreiber 2025.',time:'vor 4h',topics:['ki']},
+  {id:4,src:'WSJ',chip:'chip-charcoal',headline:'Small-Cap-Aktien: Comeback oder Strohfeuer?',summary:'Nach einem starken Quartal liegt der MSCI World Small Cap YTD bei +12%. Bewertungen bleiben attraktiv.',time:'vor 5h',topics:['geldanlage','etf']},
+  {id:5,src:'CNBC',chip:'chip-navy2',headline:'China pumpt 300 Mrd. USD in Konjunkturprogramm',summary:'Peking kündigte ein massives Stimulus-Paket an. Emerging-Markets-ETFs profitieren, da China ca. 10% im FTSE All-World ausmacht.',time:'vor 6h',topics:['makro','etf']},
+  {id:6,src:'Seeking Alpha',chip:'chip-rose',headline:'VWCE vs. IWDA: Welcher ETF ist 2025 die bessere Wahl?',summary:'Für langfristig orientierte Anleger bleibt die breite Diversifikation des VWCE (inkl. Emerging Markets) vorteilhaft.',time:'vor 8h',topics:['etf','geldanlage']},
+  {id:7,src:'Bloomberg',chip:'chip-navy',headline:'Nvidia übertrifft Erwartungen — Rechenzentren boomen',summary:'Der Chiphersteller meldete +78% Umsatz YoY. KI-Investitionen treiben den Data-Center-Bereich stark.',time:'vor 9h',topics:['ki']},
+  {id:8,src:'MarketWatch',chip:'chip-steel',headline:'Inflation in der Eurozone kühlt ab — EZB prüft nächste Senkung',summary:'Kerninflation fiel auf 2,3%. Märkte preisen für Sommer eine weitere Senkung ein. EUR/USD stieg auf 1,12.',time:'vor 11h',topics:['makro']},
+  {id:9,src:'Reuters',chip:'chip-rose',headline:'ETF-Zuflüsse 2025: Passives Investieren gewinnt weiter',summary:'Globale ETFs verzeichneten Q1 Nettozuflüsse von über 400 Mrd. USD. Besonders gefragt: Welt-ETFs und Gold-ETCs.',time:'vor 14h',topics:['etf','geldanlage']},
+  {id:10,src:'Financial Times',chip:'chip-steel',headline:'Anthropic, xAI, DeepSeek: Das KI-Wettrennen 2025',summary:'Drei Newcomer fordern OpenAI heraus. Für Investoren ergeben sich neue Chancen in KI-Infrastruktur.',time:'vor 16h',topics:['ki']},
+];
+
+let portfolio=JSON.parse(localStorage.getItem('fr2_portfolio')||'null')||[
+  {ticker:'VWCE.DE',name:'Vanguard FTSE All-World Acc',shares:10,buyPrice:130.00,curPrice:null},
+  {ticker:'VZLD.DE',name:'WisdomTree Physical Swiss Gold',shares:5,buyPrice:45.00,curPrice:null},
+  {ticker:'IUSN.DE',name:'iShares MSCI World Small Cap Acc',shares:20,buyPrice:7.20,curPrice:null},
+];
+let newsFilter='all';
+
+// Clock
+function tick(){
+  const n=new Date();
+  document.getElementById('clock').textContent=n.toLocaleTimeString('de-DE');
+  const d=n.getDay(),h=n.getHours();
+  const open=d>=1&&d<=5&&h>=9&&h<18;
+  const pill=document.getElementById('market-pill');
+  pill.textContent=open?'Börse offen':'Börse geschlossen';
+  pill.className='status-pill '+(open?'status-open':'status-closed');
+  document.getElementById('s-status').textContent=open?'Offen (XETRA)':'Geschlossen';
+}
+setInterval(tick,1000);tick();
+
+// Nav
+function nav(el){
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('p-'+el.dataset.page).classList.add('active');
+  if(el.dataset.page==='portfolio')renderPort();
+  if(el.dataset.page==='news')renderNews();
+  if(el.dataset.page==='settings')renderSettings();
+  if(el.dataset.page==='briefing'){const b=document.getElementById('br-main');if(b.querySelector('.dots'))doBriefing();}
+}
+
+// ETF grid
+function buildETFGrid(){
+  document.getElementById('etf-grid').innerHTML=ETFS.map(e=>`
+    <div class="etf-card ${e.col}" id="card-${e.id}">
+      <div class="etf-ticker-row"><span class="etf-ticker">${e.ticker}</span><span class="etf-badge ${e.badge}">${e.type}</span></div>
+      <div class="etf-name">${e.name}</div>
+      <div class="etf-price" id="pr-${e.id}"><span class="skel" style="width:90px;height:30px;">&nbsp;</span></div>
+      <div class="etf-currency-label">EUR · XETRA</div>
+      <div class="etf-delta" id="dl-${e.id}">—</div>
+      <div class="etf-footer">
+        <div class="etf-footer-item"><label>ISIN</label><span>${e.isin}</span></div>
+        <div class="etf-footer-item"><label>TER</label><span>${e.ter}</span></div>
+      </div>
+    </div>`).join('');
+}
+
+// Yahoo Finance via proxy
+async function fetchYahoo(ticker){
+  const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2d`;
+  const proxy=`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+  try{
+    const r=await fetch(proxy,{signal:AbortSignal.timeout(9000)});
+    const j=await r.json();
+    const data=JSON.parse(j.contents);
+    const meta=data?.chart?.result?.[0]?.meta;
+    if(!meta)return null;
+    const price=meta.regularMarketPrice;
+    const prev=meta.previousClose||meta.chartPreviousClose;
+    return{price,chg:price-prev,chgPct:((price-prev)/prev)*100,currency:meta.currency};
+  }catch{return null;}
+}
+
+async function loadPrices(btn){
+  if(btn){btn.innerHTML='<span class="spin">⟳</span> Lädt …';btn.disabled=true;}
+  await Promise.allSettled(ETFS.map(async e=>{
+    const q=await fetchYahoo(e.ticker);
+    const prEl=document.getElementById('pr-'+e.id);
+    const dlEl=document.getElementById('dl-'+e.id);
+    if(!q||!prEl)return;
+    const up=q.chg>=0;
+    prEl.textContent=q.price.toFixed(2);
+    dlEl.className='etf-delta '+(up?'delta-up':'delta-down');
+    dlEl.textContent=(up?'▲ +':'▼ ')+Math.abs(q.chg).toFixed(2)+' EUR ('+(up?'+':'')+q.chgPct.toFixed(2)+'%)';
+    portfolio.forEach(p=>{if(p.ticker===e.ticker)p.curPrice=q.price;});
+  }));
+  const fx=await fetchYahoo('EURUSD=X');
+  if(fx)document.getElementById('s-eurusd').textContent=fx.price.toFixed(4);
+  const gold=await fetchYahoo('GC=F');
+  if(gold)document.getElementById('s-gold').textContent=gold.price.toLocaleString('de-DE',{maximumFractionDigits:0})+' USD';
+  document.getElementById('s-updated').textContent=new Date().toLocaleTimeString('de-DE');
+  savePort();
+  if(btn){btn.innerHTML='⟳ Kurse aktualisieren';btn.disabled=false;}
+}
+
+// Dashboard
+function buildDashNews(){
+  document.getElementById('dash-news').innerHTML=NEWS.slice(0,5).map(n=>`
+    <div class="news-item" onclick="this.classList.toggle('open')">
+      <span class="source-chip ${n.chip}">${n.src}</span>
+      <div class="news-headline">${n.headline}</div>
+      <div class="news-meta"><span>${n.time}</span>${n.topics.map(t=>`<span class="news-tag">${t}</span>`).join('')}<span class="news-expand">Zusammenfassung</span></div>
+      <div class="news-summary-text">${n.summary}</div>
+    </div>`).join('');
+}
+
+async function buildDashMarkets(){
+  const el=document.getElementById('dash-markets');
+  const IDX=[{l:'DAX',t:'^GDAXI'},{l:'S&P 500',t:'^GSPC'},{l:'NASDAQ',t:'^IXIC'},{l:'Gold (USD)',t:'GC=F'},{l:'Bitcoin',t:'BTC-USD'},{l:'EUR/USD',t:'EURUSD=X'}];
+  const rows=await Promise.allSettled(IDX.map(async i=>{
+    const q=await fetchYahoo(i.t);
+    if(!q)return null;
+    const up=q.chg>=0;
+    return `<div class="market-row"><span class="market-name">${i.l}</span><span class="market-price">${q.price.toLocaleString('de-DE',{maximumFractionDigits:2})}</span><span class="market-chg ${up?'up':'dn'}">${up?'+':''}${q.chgPct.toFixed(2)}%</span></div>`;
+  }));
+  const html=rows.map(r=>r.value||'').filter(Boolean).join('');
+  el.innerHTML=html||'<div style="color:var(--text3);padding:12px;font-size:12px;">Marktdaten momentan nicht verfügbar — bitte neu laden.</div>';
+}
+
+// News
+function renderNews(){
+  const q=(document.getElementById('ns-search')?.value||'').toLowerCase();
+  const list=NEWS.filter(n=>{
+    if(newsFilter!=='all'&&!n.topics.includes(newsFilter))return false;
+    if(q&&!n.headline.toLowerCase().includes(q)&&!n.summary.toLowerCase().includes(q))return false;
+    return true;
+  });
+  document.getElementById('news-grid').innerHTML=`
+    <div>${list.map(n=>`
+      <div class="news-item card" style="margin-bottom:10px;padding:0;" onclick="this.classList.toggle('open')">
+        <div style="padding:13px 16px;">
+          <span class="source-chip ${n.chip}">${n.src}</span>
+          <div class="news-headline" style="font-size:14px;">${n.headline}</div>
+          <div class="news-meta" style="margin-top:6px;"><span>${n.time}</span>${n.topics.map(t=>`<span class="news-tag">${t}</span>`).join('')}<span class="news-expand">Details</span></div>
+          <div class="news-summary-text">${n.summary}</div>
+        </div>
+      </div>`).join('')}
+      ${!list.length?'<div style="color:var(--text3);padding:24px;text-align:center;">Keine Nachrichten für diesen Filter.</div>':''}
+    </div>
+    <div><div class="card"><div class="card-head"><span class="card-title">Quellen</span></div><div class="card-body" style="padding:10px 16px;">
+      ${SOURCES.filter(s=>s.on).map(s=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border2);"><div><span class="source-chip ${s.chip}">${s.name}</span><span style="font-size:11px;color:var(--text3);margin-left:6px;">${s.desc}</span></div><a href="${s.url}" target="_blank" style="font-size:11px;color:var(--rose2);">→</a></div>`).join('')}
+    </div></div></div>`;
+}
+
+function setFilter(f,el){newsFilter=f;document.querySelectorAll('.filter-bar .chip-btn').forEach(b=>b.classList.remove('on'));el.classList.add('on');renderNews();}
+function goTopic(el){document.querySelector('[data-page="news"]').click();document.getElementById('ns-search').value=el.textContent.trim();renderNews();}
+
+// Briefing
+async function doBriefing(){
+  const key=localStorage.getItem('fr2_apikey')||'';
+  const sections=[
+    {id:'br-main',prompt:'Erstelle ein prägnantes deutsches Marktbriefing für heute (3–4 Sätze): Finanzmärkte, KI, Gold, ETFs.'},
+    {id:'br-ki',prompt:'Top-KI-Entwicklungen diese Woche: 4 präzise Bullet Points auf Deutsch.'},
+    {id:'br-macro',prompt:'Weltwirtschaft & Makro aktuell: Was bewegt die globalen Märkte? 4 Punkte auf Deutsch.'},
+    {id:'br-etf',prompt:'Für Anleger mit VWCE (FTSE All-World) und MSCI World Small Cap ETFs: Was ist diese Woche relevant? 4 Punkte.'},
+    {id:'br-gold',prompt:'Gold & Rohstoffe aktuell: Lage, Preistreiber, Ausblick. 4 Punkte auf Deutsch.'},
+  ];
+  for(const s of sections){
+    const el=document.getElementById(s.id);
+    el.innerHTML=`<div class="loading-row"><div class="dots"><span></span><span></span><span></span></div>KI analysiert …</div>`;
+    if(!key){el.innerHTML=`<div style="font-size:12px;color:var(--text3);padding:8px 0;">Kein API-Key hinterlegt. Bitte in den <strong>Einstellungen</strong> eintragen.</div>`;continue;}
+    try{
+      const r=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,tools:[{type:'web_search_20250305',name:'web_search'}],
+          system:'Du bist ein präziser Finanzmarkt-Analyst. Antworte auf Deutsch. Kurz, informativ, für Privatanleger. Nur einfaches HTML (<b>,<br>), keine Backticks.',
+          messages:[{role:'user',content:s.prompt}]})
+      });
+      const d=await r.json();
+      const txt=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+      el.innerHTML=`<div style="font-size:13px;line-height:1.8;color:var(--text2);">${txt.replace(/\n/g,'<br>')}</div>`;
+    }catch(e){el.innerHTML=`<div style="color:var(--red);font-size:12px;">Fehler: ${e.message}</div>`;}
+  }
+}
+
+// Portfolio
+function savePort(){localStorage.setItem('fr2_portfolio',JSON.stringify(portfolio));}
+function renderPort(){
+  const tbody=document.getElementById('port-body');
+  let totVal=0,totCost=0;
+  tbody.innerHTML=portfolio.map((p,i)=>{
+    const cur=p.curPrice||p.buyPrice,val=cur*p.shares,cost=p.buyPrice*p.shares,pnl=val-cost,pct=(pnl/cost)*100,up=pnl>=0;
+    totVal+=val;totCost+=cost;
+    return `<tr><td>${p.name}</td><td class="mono" style="color:var(--rose2);">${p.ticker}</td><td class="mono">${p.shares}</td><td class="mono">${p.buyPrice.toFixed(2)}</td><td class="mono">${cur.toFixed(2)}${!p.curPrice?' <span style="color:var(--muted);font-size:10px;">*</span>':''}</td><td class="mono"><b>${val.toFixed(2)}</b></td><td class="mono ${up?'up':'dn'}">${up?'+':''}${pnl.toFixed(2)}</td><td class="mono ${up?'up':'dn'}">${up?'+':''}${pct.toFixed(2)}%</td><td><button onclick="delPos(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;">×</button></td></tr>`;
+  }).join('');
+  if(!portfolio.length)tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:28px;">Noch keine Positionen.</td></tr>`;
+  const pnlT=totVal-totCost,pctT=totCost>0?(pnlT/totCost)*100:0,up=pnlT>=0;
+  document.getElementById('pt-total').textContent=totVal.toFixed(2)+' EUR';
+  const ce=document.getElementById('pt-chg');
+  ce.textContent=(up?'+':'')+pnlT.toFixed(2)+' EUR ('+(up?'+':'')+pctT.toFixed(2)+'%)';
+  ce.style.color=up?'#6fcca0':'#e08080';
+}
+function addPos(){
+  const t=document.getElementById('i-ticker').value.trim().toUpperCase();
+  const n=document.getElementById('i-name').value.trim()||t;
+  const s=parseFloat(document.getElementById('i-shares').value);
+  const b=parseFloat(document.getElementById('i-buy').value);
+  if(!t||isNaN(s)||isNaN(b)||s<=0||b<=0){alert('Bitte alle Felder ausfüllen.');return;}
+  portfolio.push({ticker:t,name:n,shares:s,buyPrice:b,curPrice:null});
+  savePort();['i-ticker','i-name','i-shares','i-buy'].forEach(id=>document.getElementById(id).value='');
+  renderPort();
+}
+function delPos(i){portfolio.splice(i,1);savePort();renderPort();}
+async function refreshPort(btn){
+  if(btn){btn.innerHTML='<span class="spin">⟳</span>';btn.disabled=true;}
+  await Promise.allSettled([...new Set(portfolio.map(p=>p.ticker))].map(async t=>{
+    const q=await fetchYahoo(t);
+    if(q)portfolio.forEach(p=>{if(p.ticker===t)p.curPrice=q.price;});
+  }));
+  savePort();renderPort();
+  if(btn){btn.innerHTML='⟳ Kurse laden (kostenlos)';btn.disabled=false;}
+}
+
+// Settings
+function renderSettings(){
+  document.getElementById('apikey-input').value=localStorage.getItem('fr2_apikey')||'';
+  document.getElementById('src-list').innerHTML=SOURCES.map((s,i)=>`
+    <div class="set-row">
+      <div><div class="set-lbl"><span class="source-chip ${s.chip}">${s.name}</span></div><div class="set-sub">${s.desc} — <a href="${s.url}" target="_blank" style="color:var(--rose2);">${s.url.replace('https://','')}</a></div></div>
+      <label class="toggle"><input type="checkbox" ${s.on?'checked':''} onchange="SOURCES[${i}].on=this.checked"><div class="toggle-track"></div></label>
+    </div>`).join('');
+}
+function saveKey(){localStorage.setItem('fr2_apikey',document.getElementById('apikey-input').value.trim());alert('Gespeichert ✓');}
+
+// Init
+buildETFGrid();
+buildDashNews();
+loadPrices(null);
+buildDashMarkets();
+</script>
+</body>
+</html>

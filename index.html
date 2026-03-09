@@ -333,7 +333,7 @@
 <script>
 const ETFS=[
   {id:'vwce',ticker:'VWCE.DE',name:'Vanguard FTSE All-World Acc',isin:'IE00BK5BQT80',col:'c-navy',badge:'b-navy',ter:'0,19%',type:'ETF'},
-  {id:'vzld',ticker:'VZLD.DE',name:'WisdomTree Physical Swiss Gold',isin:'JE00B588CD74',col:'c-rose',badge:'b-rose',ter:'0,15%',type:'ETC'},
+  {id:'vzld',ticker:'VZLD.DE',fallback:'VZLD.L',name:'WisdomTree Physical Swiss Gold',isin:'JE00B588CD74',col:'c-rose',badge:'b-rose',ter:'0,15%',type:'ETC'},
   {id:'iusn',ticker:'IUSN.DE',name:'iShares MSCI World Small Cap Acc',isin:'IE00BF4RFH31',col:'c-steel',badge:'b-steel',ter:'0,35%',type:'ETF'},
 ];
 const SOURCES=[
@@ -426,10 +426,12 @@ async function fetchYahoo(ticker){
 async function loadPrices(btn){
   if(btn){btn.innerHTML='<span class="spin">⟳</span> Lädt …';btn.disabled=true;}
   await Promise.allSettled(ETFS.map(async e=>{
-    const q=await fetchYahoo(e.ticker);
+    let q=await fetchYahoo(e.ticker);
+    if(!q&&e.fallback)q=await fetchYahoo(e.fallback);
     const prEl=document.getElementById('pr-'+e.id);
     const dlEl=document.getElementById('dl-'+e.id);
-    if(!q||!prEl)return;
+    if(!prEl)return;
+    if(!q){prEl.textContent='—';dlEl.textContent='Kurs nicht verfügbar';return;}
     const up=q.chg>=0;
     prEl.textContent=q.price.toFixed(2);
     dlEl.className='etf-delta '+(up?'delta-up':'delta-down');
@@ -564,7 +566,9 @@ function delPos(i){portfolio.splice(i,1);savePort();renderPort();}
 async function refreshPort(btn){
   if(btn){btn.innerHTML='<span class="spin">⟳</span>';btn.disabled=true;}
   await Promise.allSettled([...new Set(portfolio.map(p=>p.ticker))].map(async t=>{
-    const q=await fetchYahoo(t);
+    const etf=ETFS.find(e=>e.ticker===t);
+    let q=await fetchYahoo(t);
+    if(!q&&etf?.fallback)q=await fetchYahoo(etf.fallback);
     if(q)portfolio.forEach(p=>{if(p.ticker===t)p.curPrice=q.price;});
   }));
   savePort();renderPort();

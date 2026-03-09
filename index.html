@@ -385,7 +385,7 @@ function nav(el){
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('p-'+el.dataset.page).classList.add('active');
-  if(el.dataset.page==='portfolio')renderPort();
+  if(el.dataset.page==='portfolio'){renderPort();if(portfolio.some(p=>!p.curPrice))refreshPort(null);}
   if(el.dataset.page==='news')renderNews();
   if(el.dataset.page==='settings')renderSettings();
   if(el.dataset.page==='briefing'){const b=document.getElementById('br-main');if(b.querySelector('.dots'))doBriefing();}
@@ -438,7 +438,7 @@ async function loadPrices(btn){
   }));
   const fx=await fetchYahoo('EURUSD=X');
   if(fx)document.getElementById('s-eurusd').textContent=fx.price.toFixed(4);
-  const gold=await fetchYahoo('GC=F');
+  const gold=await fetchYahoo('XAUUSD=X');
   if(gold)document.getElementById('s-gold').textContent=gold.price.toLocaleString('de-DE',{maximumFractionDigits:0})+' USD';
   document.getElementById('s-updated').textContent=new Date().toLocaleTimeString('de-DE');
   savePort();
@@ -447,7 +447,7 @@ async function loadPrices(btn){
 
 // Dashboard
 function buildDashNews(){
-  document.getElementById('dash-news').innerHTML=NEWS.slice(0,5).map(n=>`
+  document.getElementById('dash-news').innerHTML=NEWS.filter(n=>{const src=SOURCES.find(s=>s.name===n.src||s.id===n.src.toLowerCase());return!src||src.on;}).slice(0,5).map(n=>`
     <div class="news-item" onclick="this.classList.toggle('open')">
       <span class="source-chip ${n.chip}">${n.src}</span>
       <div class="news-headline">${n.headline}</div>
@@ -458,7 +458,7 @@ function buildDashNews(){
 
 async function buildDashMarkets(){
   const el=document.getElementById('dash-markets');
-  const IDX=[{l:'DAX',t:'^GDAXI'},{l:'S&P 500',t:'^GSPC'},{l:'NASDAQ',t:'^IXIC'},{l:'Gold (USD)',t:'GC=F'},{l:'Bitcoin',t:'BTC-USD'},{l:'EUR/USD',t:'EURUSD=X'}];
+  const IDX=[{l:'DAX',t:'^GDAXI'},{l:'S&P 500',t:'^GSPC'},{l:'NASDAQ',t:'^IXIC'},{l:'Gold (USD)',t:'XAUUSD=X'},{l:'Bitcoin',t:'BTC-USD'},{l:'EUR/USD',t:'EURUSD=X'}];
   const rows=await Promise.allSettled(IDX.map(async i=>{
     const q=await fetchYahoo(i.t);
     if(!q)return null;
@@ -473,6 +473,8 @@ async function buildDashMarkets(){
 function renderNews(){
   const q=(document.getElementById('ns-search')?.value||'').toLowerCase();
   const list=NEWS.filter(n=>{
+    const src=SOURCES.find(s=>s.name===n.src||s.id===n.src.toLowerCase());
+    if(src&&!src.on)return false;
     if(newsFilter!=='all'&&!n.topics.includes(newsFilter))return false;
     if(q&&!n.headline.toLowerCase().includes(q)&&!n.summary.toLowerCase().includes(q))return false;
     return true;
@@ -518,7 +520,7 @@ async function doBriefing(){
         messages:[{role:'user',content:s.prompt}]});
       let r,d;
       try{
-        r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},body:payload});
+        r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-beta':'web-search-2025-03-05','anthropic-dangerous-direct-browser-access':'true'},body:payload});
         d=await r.json();
       }catch(e1){
         el.innerHTML=`<div style="color:var(--red);font-size:12px;">Verbindungsfehler: ${e1.message}</div>`;continue;
@@ -580,11 +582,62 @@ function renderSettings(){
 }
 function saveKey(){localStorage.setItem('fr2_apikey',document.getElementById('apikey-input').value.trim());alert('Gespeichert ✓');}
 
+// RSS News
+function timeAgo(date){
+  if(isNaN(date))return'';
+  const h=Math.floor((Date.now()-date)/3600000);
+  if(h<1)return'vor wenigen Min.';
+  if(h<24)return`vor ${h}h`;
+  return`vor ${Math.floor(h/24)}d`;
+}
+function guessTopics(h){
+  const t=h.toLowerCase(),r=[];
+  if(/\bki\b|ai\b|künst|artif|gpt|llm|openai|anthropic|nvidia|chip|tech/.test(t))r.push('ki');
+  if(/fed|ezb|zins|inflation|gdp|bip|rezession|konjunktur|wachstum/.test(t))r.push('makro');
+  if(/gold|rohstoff|silber/.test(t))r.push('gold');
+  if(/etf|fonds|passiv/.test(t))r.push('etf');
+  if(/anlage|invest|aktie|depot|rendite/.test(t))r.push('geldanlage');
+  return r.length?r:['makro'];
+}
+async function fetchRSSFeed(feedUrl,src,chip){
+  try{
+    const proxy=`https://api.allorigins.win/get?url=${encodeURIComponent(feedUrl)}`;
+    const r=await fetch(proxy,{signal:AbortSignal.timeout(9000)});
+    const j=await r.json();
+    const xml=new DOMParser().parseFromString(j.contents,'text/xml');
+    return[...xml.querySelectorAll('item')].slice(0,5).map(item=>({
+      id:Math.random(),
+      src,chip,
+      headline:(item.querySelector('title')?.textContent||'').trim(),
+      summary:(item.querySelector('description')?.textContent||'').replace(/<[^>]*>/g,'').trim().slice(0,220),
+      time:timeAgo(new Date(item.querySelector('pubDate')?.textContent||'')),
+      topics:guessTopics(item.querySelector('title')?.textContent||''),
+    })).filter(n=>n.headline);
+  }catch{return[];}
+}
+async function loadRSSNews(){
+  const feeds=[
+    {url:'https://feeds.reuters.com/reuters/businessNews',src:'Reuters',chip:'chip-rose'},
+    {url:'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664',src:'CNBC',chip:'chip-navy2'},
+    {url:'https://feeds.marketwatch.com/marketwatch/marketpulse/',src:'MarketWatch',chip:'chip-steel'},
+  ];
+  const results=await Promise.allSettled(feeds.map(f=>fetchRSSFeed(f.url,f.src,f.chip)));
+  const fresh=results.flatMap(r=>r.value||[]);
+  if(fresh.length>0){
+    NEWS.length=0;
+    fresh.forEach(n=>NEWS.push(n));
+  }
+  buildDashNews();
+  const newsPage=document.getElementById('p-news');
+  if(newsPage?.classList.contains('active'))renderNews();
+}
+
 // Init
 buildETFGrid();
 buildDashNews();
 loadPrices(null);
 buildDashMarkets();
+loadRSSNews();
 </script>
 </body>
 </html>

@@ -447,7 +447,7 @@ async function loadPrices(btn){
 
 // Dashboard
 function buildDashNews(){
-  document.getElementById('dash-news').innerHTML=NEWS.slice(0,5).map(n=>`
+  document.getElementById('dash-news').innerHTML=NEWS.filter(n=>{const src=SOURCES.find(s=>s.name===n.src||s.id===n.src.toLowerCase());return!src||src.on;}).slice(0,5).map(n=>`
     <div class="news-item" onclick="this.classList.toggle('open')">
       <span class="source-chip ${n.chip}">${n.src}</span>
       <div class="news-headline">${n.headline}</div>
@@ -473,6 +473,8 @@ async function buildDashMarkets(){
 function renderNews(){
   const q=(document.getElementById('ns-search')?.value||'').toLowerCase();
   const list=NEWS.filter(n=>{
+    const src=SOURCES.find(s=>s.name===n.src||s.id===n.src.toLowerCase());
+    if(src&&!src.on)return false;
     if(newsFilter!=='all'&&!n.topics.includes(newsFilter))return false;
     if(q&&!n.headline.toLowerCase().includes(q)&&!n.summary.toLowerCase().includes(q))return false;
     return true;
